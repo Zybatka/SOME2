@@ -189,3 +189,56 @@ src/main/java/edu/platform/
 - Интеграция с внешними LMS системами
 - Кэширование часто используемых данных
 - Поддержка мультимедиа контента
+## Дополнения (Лабораторная №2)
+
+### Модульный монолит
+- Организация по пакетам верхнего уровня: `edu.platform.media`, `edu.platform.entity` (включая `Lesson`, `MediaAsset`), `service`, `controller`.
+- Взаимодействие модулей через интерфейсы: `FileStorage`, `ResultEvaluationService`.
+
+### Новые сущности
+- `Lesson` — элементы курса с полями: id, courseId, title, content, orderIndex, createdAt, updatedAt, `@Version`.
+- `MediaAsset` — медиафайлы: id, ownerId, fileName, filePath, fileSize, contentType, checksum, createdAt; связи с `User` и опционально `Course`.
+- В `QuizAttempt` добавлены поля `status` (PASSED/FAILED) и `duration_seconds`.
+
+### Миграции БД (Flyway)
+- `V2__create_lessons.sql` — таблица `lessons` с оптимистической блокировкой.
+- `V3__create_media_assets.sql` — таблица `media_assets`, уникальный индекс по `checksum`.
+- `V4__alter_quiz_attempts_add_result.sql` — добавлены `status` и `duration_seconds` в `quiz_attempts`.
+
+### Рабочая с файловой системой (media)
+- Интерфейс `FileStorage` и реализация `LocalFileStorage` (детерминированные имена по SHA-256, хранение на локальном диске).
+- Декоратор `ResilientFileStorage`: Timeout + Retry + Circuit Breaker для операций save/load/delete.
+- `MediaService`: валидация (PNG/JPG/WEBP, до 5 МБ), сохранение файла, запись метаданных в `media_assets`.
+
+### Надёжность (Resilience4j)
+- Файловые операции: TimeLimiter (3s), Retry (3 попытки), CircuitBreaker.
+- Вычисление результата квиза: `ResultEvaluationService` с TimeLimiter + CircuitBreaker и безопасным fallback → FAILED.
+
+### REST API: Lessons и Media
+- Lessons: `POST /api/lessons` (TEACHER/ADMIN), `GET /api/lessons/{id}`, `PUT /api/lessons/{id}`.
+- Media: `POST /api/media` (multipart/form-data: поле `file`, опционально `courseId`), `GET /api/media/{id}`, `GET /api/media/{id}/download`.
+
+### Конфигурация
+- `application.yml`: лимиты multipart, `media.storage.base-dir`, `media.storage.allowed-content-types`.
+- Resilience4j: при желании можно перевести конфигурацию на `CircuitBreakerRegistry/RetryRegistry/TimeLimiterRegistry` и аннотации.
+
+### Примеры запросов (PowerShell)
+```powershell
+# Регистрация и логин
+$reg = @{ email='user1@example.com'; password='secret123'; fullName='User One'; role='TEACHER' } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/auth/register -ContentType 'application/json' -Body $reg
+$login = @{ email='user1@example.com'; password='secret123' } | ConvertTo-Json
+$resp = Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/auth/login -ContentType 'application/json' -Body $login
+$token = $resp.accessToken
+
+# Создать урок (TEACHER)
+$lesson = @{ courseId=1; title='Intro'; content='...' ; orderIndex=1 } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/lessons -Headers @{ Authorization = "Bearer $token" } -ContentType 'application/json' -Body $lesson
+
+# Загрузка изображения (multipart)
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/media -Headers @{ Authorization = "Bearer $token" } -Form @{ file = Get-Item .\image.png }
+```
+
+### Swagger и порт
+- Если приложение запущено на другом порту (например, 8081), открывайте Swagger по фактическому адресу (например, `http://localhost:8081/swagger-ui.html`).
+- В конфигурации OpenAPI можно убрать жёстко заданный сервер `http://localhost:8080` и указать относительный `url: /`, чтобы Swagger всегда использовал текущий хост/порт.
