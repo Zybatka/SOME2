@@ -79,6 +79,15 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/quizzes/**").hasAnyRole("TEACHER", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/quizzes/*/start").hasAnyRole("STUDENT", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/quizzes/submit").hasAnyRole("STUDENT", "ADMIN")
+
+                // Lesson endpoints
+                .requestMatchers(HttpMethod.POST, "/api/lessons/**").hasAnyRole("TEACHER", "ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/lessons/**").hasAnyRole("TEACHER", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/lessons/**").hasAnyRole("STUDENT", "TEACHER", "ADMIN")
+
+                // Media endpoints
+                .requestMatchers(HttpMethod.POST, "/api/media").hasAnyRole("STUDENT", "TEACHER", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/media/**").hasAnyRole("STUDENT", "TEACHER", "ADMIN")
                 
                 // User endpoints
                 .requestMatchers("/api/users/**").hasAnyRole("STUDENT", "TEACHER", "ADMIN")

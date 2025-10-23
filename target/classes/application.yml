@@ -1,0 +1,95 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/Psuti_test?sslmode=disable
+    username: Psuti_test
+    password: '123' # лучше в кавычках
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update # или как у вас принято
+    show-sql: false
+
+  flyway:
+    enabled: true # если нужны миграции
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  security:
+    jwt:
+      secret: mySecretKey123456789012345678901234567890
+      expiration: 86400000 # 24 hours in milliseconds
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: INFO
+    edu.platform: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: Course Management Platform
+    description: Platform for managing courses and quizzes
+    version: 1.0.0
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      fileStorage:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+      resultEvaluator:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s
+        permittedNumberOfCallsInHalfOpenState: 2
+  retry:
+    instances:
+      fileStorage:
+        maxAttempts: 3
+        waitDuration: 200ms
+  timelimiter:
+    instances:
+      fileStorage:
+        timeoutDuration: 3s
+      resultEvaluator:
+        timeoutDuration: 1s
+
+media:
+  storage:
+    base-dir: storage/media
+    allowed-content-types:
+      - image/png
+      - image/jpeg
+      - image/webp
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB

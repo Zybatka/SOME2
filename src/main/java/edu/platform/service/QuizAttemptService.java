@@ -34,6 +34,7 @@ public class QuizAttemptService {
     private final AnswerOptionRepository answerOptionRepository;
     private final StudentAnswerRepository studentAnswerRepository;
     private final QuizAttemptMapper quizAttemptMapper;
+    private final ResultEvaluationService resultEvaluationService;
     
     @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     public QuizAttemptResponse startQuizAttempt(Long quizId, Long studentId) {
@@ -127,6 +128,12 @@ public class QuizAttemptService {
         attempt.setMaxScore(maxPossibleScore);
         attempt.setCompletedAt(LocalDateTime.now());
         attempt.setIsCompleted(true);
+        attempt.setCompletedAt(LocalDateTime.now());
+        if (attempt.getStartedAt() != null && attempt.getCompletedAt() != null) {
+            int seconds = (int) java.time.Duration.between(attempt.getStartedAt(), attempt.getCompletedAt()).getSeconds();
+            attempt.setDurationSeconds(Math.max(seconds, 0));
+        }
+        attempt.setStatus(resultEvaluationService.evaluate(totalScore, maxPossibleScore));
         
         QuizAttempt savedAttempt = quizAttemptRepository.save(attempt);
         log.info("Quiz attempt submitted successfully with ID: {}, Score: {}/{}", 

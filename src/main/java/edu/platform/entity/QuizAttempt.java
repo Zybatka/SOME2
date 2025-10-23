@@ -54,9 +54,16 @@ public class QuizAttempt {
     @Column(name = "is_completed", nullable = false)
     @Builder.Default
     private Boolean isCompleted = false;
-    
+
     // Relationships
     @OneToMany(mappedBy = "attempt", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
     private List<StudentAnswer> answers = new ArrayList<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private edu.platform.entity.enums.AttemptStatus status;
+
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
 }
